@@ -90,7 +90,7 @@ export default class SaturationExtension extends Extension {
         this._slider.connect('notify::value', onSliderChanged);
 
         // Snap to center (0.5) when close; react to both drag-end and button-release
-        const SNAP_THRESHOLD = 0.1; // within 10% to snap
+        const SNAP_THRESHOLD = 0.05; // within 5% to snap
         const doSnapIfNearCenter = () => {
             const v = this._slider.value;
             if (Math.abs(v - 0.5) <= SNAP_THRESHOLD) {
