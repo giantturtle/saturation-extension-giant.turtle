@@ -7,6 +7,7 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import St from 'gi://St';
 import GLib from 'gi://GLib';
 import * as Slider from 'resource:///org/gnome/shell/ui/slider.js';
+import Clutter from 'gi://Clutter';
 
 import { SaturationEffect } from './glslEffect.js';
 import { MAX_MONITORS_SUPPORTED } from './monitors.js';
@@ -22,6 +23,10 @@ export default class SaturationExtension extends Extension {
     _sliderItem = null; // PopupBaseMenuItem wrapper
     _slider = null;     // Slider.Slider widget
     _ignoreSlider = false;
+    _active = true;
+    _switchItem = null;
+    _titleItem = null;
+    _markItem = null;
 
     enable() {
         this._settings = this.getSettings();
@@ -50,9 +55,27 @@ export default class SaturationExtension extends Extension {
         const icon = new St.Icon({ icon_name: 'color-select-symbolic', style_class: 'system-status-icon' });
         this._indicator.add_child(icon);
 
+        // On/off switch
+        this._switchItem = new PopupMenu.PopupSwitchMenuItem('Enabled', true);
+        this._switchItem.connect('toggled', (item, state) => {
+            this._active = state;
+            // Enable/disable slider interactions
+            if (this._slider)
+                this._slider.reactive = this._active;
+            this._syncSettings();
+            this._refreshUiActiveState();
+        });
+        this._indicator.menu.addMenuItem(this._switchItem);
+
         // Slider value maps 0..1 -> saturation 0..2
         const currentSat = this._getGlobalSaturation();
         this._slider = new Slider.Slider(Math.min(Math.max(currentSat / 2.0, 0.0), 1.0));
+
+        // Title row above the slider
+        const titleItem = new PopupMenu.PopupBaseMenuItem({ reactive: false, can_focus: false });
+        titleItem.add_child(new St.Label({ text: 'Saturation' }));
+        this._indicator.menu.addMenuItem(titleItem);
+        this._titleItem = titleItem;
 
         const onSliderChanged = () => {
             if (this._ignoreSlider)
@@ -65,18 +88,43 @@ export default class SaturationExtension extends Extension {
             this._settings.set_value('saturation-factors', new GLib.Variant('ad', satFactors));
         };
         this._slider.connect('notify::value', onSliderChanged);
-        this._slider.connect('drag-end', onSliderChanged);
+
+        // Snap to center (0.5) when close; react to both drag-end and button-release
+        const SNAP_THRESHOLD = 0.1; // within 10% to snap
+        const doSnapIfNearCenter = () => {
+            const v = this._slider.value;
+            if (Math.abs(v - 0.5) <= SNAP_THRESHOLD) {
+                this._ignoreSlider = true;
+                this._slider.value = 0.5;
+                this._ignoreSlider = false;
+            }
+            onSliderChanged();
+        };
+        this._slider.connect('drag-end', doSnapIfNearCenter);
+        this._slider.connect('button-release-event', () => { doSnapIfNearCenter(); return Clutter.EVENT_PROPAGATE; });
 
         // Put the slider inside a non-reactive menu item
         this._sliderItem = new PopupMenu.PopupBaseMenuItem({ reactive: false, can_focus: false });
         this._sliderItem.add_child(this._slider);
         this._indicator.menu.addMenuItem(this._sliderItem);
 
+        // Middle mark under the slider
+        const markItem = new PopupMenu.PopupBaseMenuItem({ reactive: false, can_focus: false });
+        const markBox = new St.BoxLayout({ x_expand: true, y_align: Clutter.ActorAlign.CENTER });
+        markBox.add_child(new St.Widget({ x_expand: true }));
+        // Center mark (more visible)
+        markBox.add_child(new St.Widget({ width: 2, height: 10, style: 'background-color: rgba(255,255,255,0.7); border-radius: 1px;' }));
+        markBox.add_child(new St.Widget({ x_expand: true }));
+        markItem.add_child(markBox);
+        this._indicator.menu.addMenuItem(markItem);
+        this._markItem = markItem;
+
         Main.panel.addToStatusArea('saturationIndicator', this._indicator);
 
         this._syncMonitorSettings();
         this._syncSettings();
         this._syncIndicatorFromSettings();
+        this._refreshUiActiveState();
     }
 
     _syncMonitorSettings() {
@@ -127,6 +175,15 @@ export default class SaturationExtension extends Extension {
             colorInverts.push(storedColorInverts[t] ? 1.0 : 0.0);
         }
 
+        // If deactivated, apply neutral values without changing settings
+        if (!this._active) {
+            for (let i = 0; i < saturationFactors.length; i++) {
+                saturationFactors[i] = 1.0;
+                hueShifts[i] = 0.0;
+                colorInverts[i] = 0.0;
+            }
+        }
+
         // glslEffect only allows setting float values
         this._effect.setParams({
             use_per_monitor: usePerMonitor ? 1 : 0,
@@ -157,6 +214,20 @@ export default class SaturationExtension extends Extension {
         }
     }
 
+    _refreshUiActiveState() {
+        const opacity = this._active ? 255 : 120; // dim when disabled
+        if (this._slider)
+            this._slider.reactive = this._active;
+        if (this._sliderItem)
+            this._sliderItem.opacity = opacity;
+        if (this._titleItem)
+            this._titleItem.opacity = opacity;
+        if (this._markItem)
+            this._markItem.opacity = opacity;
+        if (this._switchItem)
+            this._switchItem.opacity = 255; // keep switch readable
+    }
+
     disable() {
         Main.layoutManager.disconnect(this._monitorChangedId);
         Main.layoutManager.uiGroup.remove_effect(this._effect);
@@ -178,6 +249,9 @@ export default class SaturationExtension extends Extension {
             this._indicator = null;
             this._sliderItem = null;
             this._slider = null;
+            this._titleItem = null;
+            this._markItem = null;
+            this._switchItem = null;
         }
     }
 }
