@@ -151,7 +151,7 @@ export default class SaturationExtension extends Extension {
         this._ignoreSlider = true;
         try {
             const sat = this._getGlobalSaturation();
-            this._slider.setValue(Math.min(Math.max(sat / 2.0, 0.0), 1.0));
+            this._slider.value = Math.min(Math.max(sat / 2.0, 0.0), 1.0);
         } finally {
             this._ignoreSlider = false;
         }
