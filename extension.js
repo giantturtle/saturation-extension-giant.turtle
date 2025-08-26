@@ -1,4 +1,5 @@
 import Meta from 'gi://Meta';
+import Gio from 'gi://Gio';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
@@ -52,7 +53,8 @@ export default class SaturationExtension extends Extension {
 
         // Panel indicator with saturation slider
         this._indicator = new PanelMenu.Button(0.0, 'Saturation', false);
-        const icon = new St.Icon({ icon_name: 'color-select-symbolic', style_class: 'system-status-icon' });
+        const gicon = Gio.icon_new_for_string(`${this.path}/top-bar-icon.svg`);
+        const icon = new St.Icon({ gicon: gicon, icon_size: 16, style_class: 'system-status-icon' });
         this._indicator.add_child(icon);
 
         // On/off switch
