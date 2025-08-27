@@ -249,11 +249,11 @@ export default class SaturationExtension extends Extension {
         if (this._indicator) {
             this._indicator.destroy();
             this._indicator = null;
-            this._sliderItem = null;
-            this._slider = null;
-            this._titleItem = null;
-            this._markItem = null;
-            this._switchItem = null;
         }
+        this._sliderItem = null;
+        this._slider = null;
+        this._titleItem = null;
+        this._markItem = null;
+        this._switchItem = null;
     }
 }
