@@ -28,6 +28,7 @@ export default class SaturationExtension extends Extension {
     _switchItem = null;
     _titleItem = null;
     _markItem = null;
+    _settingsItem = null;
 
     enable() {
         this._settings = this.getSettings();
@@ -56,6 +57,11 @@ export default class SaturationExtension extends Extension {
         const gicon = Gio.icon_new_for_string(`${this.path}/top-bar-icon.svg`);
         const icon = new St.Icon({ gicon: gicon, icon_size: 16, style_class: 'system-status-icon' });
         this._indicator.add_child(icon);
+
+        // Settings button (opens extension preferences)
+        this._settingsItem = new PopupMenu.PopupMenuItem('Settings');
+        this._settingsItem.connect('activate', () => this.openPreferences());
+        this._indicator.menu.addMenuItem(this._settingsItem);
 
         // On/off switch
         this._switchItem = new PopupMenu.PopupSwitchMenuItem('Enabled', true);
@@ -255,5 +261,6 @@ export default class SaturationExtension extends Extension {
         this._titleItem = null;
         this._markItem = null;
         this._switchItem = null;
+        this._settingsItem = null;
     }
 }
