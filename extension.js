@@ -92,7 +92,7 @@ export default class SaturationExtension extends Extension {
         this._slider.connect('notify::value', onSliderChanged);
 
         // Snap to center (0.5) when close; react to both drag-end and button-release
-        const SNAP_THRESHOLD = 0.05; // within 5% to snap
+        const SNAP_THRESHOLD = 0.03; // within 5% to snap
         const doSnapIfNearCenter = () => {
             const v = this._slider.value;
             if (Math.abs(v - 0.5) <= SNAP_THRESHOLD) {
@@ -115,7 +115,7 @@ export default class SaturationExtension extends Extension {
         const markBox = new St.BoxLayout({ x_expand: true, y_align: Clutter.ActorAlign.CENTER });
         markBox.add_child(new St.Widget({ x_expand: true }));
         // Center mark (more visible)
-        markBox.add_child(new St.Widget({ width: 2, height: 10, style: 'background-color: rgba(255,255,255,0.7); border-radius: 1px;' }));
+        markBox.add_child(new St.Widget({ width: 2, height: 10, style: 'background-color: rgba(5, 210, 50, 0.94); border-radius: 1px;' }));
         markBox.add_child(new St.Widget({ x_expand: true }));
         markItem.add_child(markBox);
         this._indicator.menu.addMenuItem(markItem);
